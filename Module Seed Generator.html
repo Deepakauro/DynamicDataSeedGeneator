@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Entity Seeder Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f7f9fc;
+      color: #333;
+    }
+    h1, h2 {
+      color: #2b5da6;
+    }
+    input, button {
+      margin: 10px 0;
+      padding: 10px;
+    }
+    pre {
+      background: #f0f0f0;
+      padding: 20px;
+      border-radius: 5px;
+      overflow-x: auto;
+      font-family: monospace;
+    }
+    #formatTips {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeeba;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dynamic C# Entity Seeder Generator</h1>
+
+  <h2>Step 1: Upload C# Entity File (.cs)</h2>
+  <input type="file" id="entityFileInput" accept=".cs" />
+  <button onclick="downloadCsv()">Download Sample CSV</button>
+  <div id="formatTips"></div>
+
+  <h2>Step 2: Upload Filled CSV</h2>
+  <label for="entityName">Enter Entity Name:</label>
+  <input type="text" id="entityName" placeholder="e.g. LensMaster" />
+  <br />
+  <input type="file" id="csvFileInput" accept=".csv" />
+  <button onclick="generateCSharp()">Generate Seeder</button>
+  <button onclick="copyToClipboard()">Copy to Clipboard</button>
+
+  <pre id="csharpOutput"></pre>
+
+  <script src="script.js"></script>
+  <script>
+    function copyToClipboard() {
+      const output = document.getElementById('csharpOutput').textContent;
+      if (!output.trim()) {
+        alert("Nothing to copy.");
+        return;
+      }
+
+      navigator.clipboard.writeText(output)
+        .then(() => alert("C# seeder code copied to clipboard!"))
+        .catch(() => alert("Failed to copy. Please copy manually."));
+    }
+  </script>
+</body>
+</html>
