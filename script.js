@@ -49,7 +49,7 @@ function getSampleValue(type) {
     case 'int32': return '1';
     case 'bool':
     case 'boolean': return 'true';
-    case 'guid': return ''; // empty for auto-generate
+    case 'guid': return ''; // empty for user-provided Guid
     default: return '';
   }
 }
@@ -64,7 +64,7 @@ function showTips() {
       case 'int32': note = 'Integer (e.g. 1, 100)'; break;
       case 'bool':
       case 'boolean': note = 'true / false'; break;
-      case 'guid': note = 'Leave blank to auto-generate Guid or enter Guid string'; break;
+      case 'guid': note = 'Enter a valid Guid string'; break;
       default: note = 'Custom type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
@@ -106,18 +106,16 @@ function generateCSharp() {
 
     for (const row of rows) {
       const values = row.split(',');
-      csharp += `    new ${entityName} {\n`;
-
-      // Handle Id from CSV or fallback to Guid.NewGuid()
       const idIndex = headers.findIndex(h => h.trim() === 'Id');
       const idValue = (idIndex !== -1 && values[idIndex]) ? values[idIndex].trim() : '';
 
-      if (idValue) {
-        csharp += `        Id = new Guid("${idValue}"),\n`;
-      } else {
-        csharp += `        Id = Guid.NewGuid(),\n`;
+      if (!idValue) {
+        alert('Missing Id in a CSV row. Each row must include a valid Id.');
+        return;
       }
 
+      csharp += `    new ${entityName} {\n`;
+      csharp += `        Id = new Guid("${idValue}"),\n`;
       csharp += `        IsActive = true,\n`;
 
       headers.forEach((header, i) => {
