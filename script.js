@@ -1,3 +1,4 @@
+<script>
 let properties = [];
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -27,7 +28,7 @@ function parseEntity(content) {
   const className = classNameMatch ? classNameMatch[1] : 'YourEntity';
   document.getElementById('entityName').value = className;
 
-  const propertyRegex = /public\s+([A-Za-z0-9<>]+)\s+([A-Za-z0-9_]+)\s*\{\s*get;\s*set;\s*\}/g;
+  const propertyRegex = /public\s+([A-Za-z0-9_<>\[\]]+)\s+([A-Za-z0-9_]+)\s*\{\s*get;\s*set;\s*\}/g;
   properties = [];
   let match;
   while ((match = propertyRegex.exec(content)) !== null) {
@@ -43,15 +44,13 @@ function parseEntity(content) {
 }
 
 function getSampleValue(type) {
-  switch (type.toLowerCase()) {
-    case 'string': return 'Sample Text';
-    case 'int':
-    case 'int32': return '1';
-    case 'bool':
-    case 'boolean': return 'true';
-    case 'guid': return ''; // empty for user-provided Guid
-    default: return '';
-  }
+  const lower = type.toLowerCase();
+  if (lower === 'string') return 'Sample Text';
+  if (lower === 'int' || lower === 'int32') return '1';
+  if (lower === 'bool' || lower === 'boolean') return 'true';
+  if (lower === 'guid') return '';
+  if (lower === 'string[]') return 'Value1|Value2';
+  return '';
 }
 
 function showTips() {
@@ -65,6 +64,7 @@ function showTips() {
       case 'bool':
       case 'boolean': note = 'true / false'; break;
       case 'guid': note = 'Enter a valid Guid string'; break;
+      case 'string[]': note = 'Pipe-delimited string (e.g. Value1|Value2)'; break;
       default: note = 'Custom type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
@@ -123,13 +123,19 @@ function generateCSharp() {
         if (!prop || prop.name === 'Id' || prop.name === 'IsActive') return;
 
         let value = values[i]?.trim() ?? '';
-        if (['int', 'int32'].includes(prop.type.toLowerCase())) {
+        const lowerType = prop.type.toLowerCase();
+
+        if (lowerType === 'int' || lowerType === 'int32') {
           value = parseInt(value) || 0;
-        } else if (['bool', 'boolean'].includes(prop.type.toLowerCase())) {
+        } else if (lowerType === 'bool' || lowerType === 'boolean') {
           value = value.toLowerCase() === 'true' ? 'true' : 'false';
+        } else if (lowerType === 'string[]') {
+          const items = value.split('|').map(v => `"${v.trim()}"`);
+          value = `new string[] { ${items.join(', ')} }`;
         } else {
           value = `"${value}"`;
         }
+
         csharp += `        ${prop.name} = ${value},\n`;
       });
 
@@ -143,3 +149,4 @@ function generateCSharp() {
 
   reader.readAsText(file);
 }
+</script>
