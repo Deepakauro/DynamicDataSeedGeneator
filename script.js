@@ -88,7 +88,10 @@ function showTips() {
       case 'bool':
       case 'boolean': note = 'true / false'; break;
       case 'guid': note = 'Enter a valid Guid string'; break;
-      case 'string[]': note = 'Pipe-separated values (e.g. "Red|Blue")'; break;
+      case 'string[]':
+        const parts = raw.split(',').map(p => `"${p.trim()}"`);
+        value = `new string[] { ${parts.join(', ')} }`;
+        break;
       default: note = 'Custom type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
