@@ -50,7 +50,7 @@ function getSampleValue(type) {
     case 'bool':
     case 'boolean': return 'true';
     case 'guid': return '';
-    case 'string[]': return 'Value1|Value2';
+    case 'string[]': return 'Item1|Item2';
     default: return '';
   }
 }
@@ -66,8 +66,8 @@ function showTips() {
       case 'bool':
       case 'boolean': note = 'true / false'; break;
       case 'guid': note = 'Enter a valid Guid string'; break;
-      case 'string[]': note = 'Pipe-delimited text values (e.g. Value1|Value2)'; break;
-      default: note = 'Custom or unsupported type'; break;
+      case 'string[]': note = 'Pipe-separated values (e.g. "One|Two|Three")'; break;
+      default: note = 'Custom type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
   }
@@ -125,19 +125,15 @@ function generateCSharp() {
         if (!prop || prop.name === 'Id' || prop.name === 'IsActive') return;
 
         let value = values[i]?.trim() ?? '';
-        const lower = prop.type.toLowerCase();
+        const type = prop.type.toLowerCase();
 
-        if (lower === 'int' || lower === 'int32') {
+        if (type === 'int' || type === 'int32') {
           value = parseInt(value) || 0;
-        } else if (lower === 'bool' || lower === 'boolean') {
+        } else if (type === 'bool' || type === 'boolean') {
           value = value.toLowerCase() === 'true' ? 'true' : 'false';
-        } else if (lower === 'string[]') {
-          const arrayItems = value
-            .split('|')
-            .filter(x => x.trim())
-            .map(v => `"${v.trim()}"`)
-            .join(', ');
-          value = `new string[] { ${arrayItems} }`;
+        } else if (type === 'string[]') {
+          const items = value.split('|').filter(x => x).map(v => `"${v.trim()}"`);
+          value = `new string[] { ${items.join(', ')} }`;
         } else {
           value = `"${value}"`;
         }
