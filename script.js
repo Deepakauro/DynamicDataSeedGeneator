@@ -1,4 +1,26 @@
-<script>
+// Minimal CSV parser that handles commas inside quotes, trims, etc.
+function parseCsv(text) {
+  const rows = [];
+  const lines = text.split('\n').filter(l => l.trim() !== '');
+  const regex = /("([^"]|"")*"|[^,]+)(,|$)/g;
+
+  for (const line of lines) {
+    const values = [];
+    let match;
+    let str = line.trim();
+    while ((match = regex.exec(str)) !== null) {
+      let val = match[1];
+      val = val.trim();
+      if (val.startsWith('"') && val.endsWith('"')) {
+        val = val.slice(1, -1).replace(/""/g, '"');
+      }
+      values.push(val);
+    }
+    rows.push(values);
+  }
+  return rows;
+}
+
 let properties = [];
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -33,7 +55,7 @@ function parseEntity(content) {
   let match;
   while ((match = propertyRegex.exec(content)) !== null) {
     const [, type, name] = match;
-    properties.push({ type, name });
+    properties.push({ type: type.trim(), name: name.trim() });
   }
 
   sessionStorage.setItem('entityProperties', JSON.stringify(properties));
@@ -50,7 +72,7 @@ function getSampleValue(type) {
     case 'bool':
     case 'boolean': return 'true';
     case 'guid': return '';
-    case 'string[]': return 'Item1|Item2';
+    case 'string[]': return 'Red|Blue|Green';
     default: return '';
   }
 }
@@ -66,7 +88,7 @@ function showTips() {
       case 'bool':
       case 'boolean': note = 'true / false'; break;
       case 'guid': note = 'Enter a valid Guid string'; break;
-      case 'string[]': note = 'Pipe-separated values (e.g. "One|Two|Three")'; break;
+      case 'string[]': note = 'Pipe-separated values (e.g. "Red|Blue")'; break;
       default: note = 'Custom type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
@@ -100,17 +122,22 @@ function generateCSharp() {
   const reader = new FileReader();
   reader.onload = function (e) {
     const text = e.target.result.trim();
-    const lines = text.split('\n');
-    const headers = lines[0].split(',');
-    const rows = lines.slice(1);
+    const rows = parseCsv(text);
+
+    if (rows.length < 2) return alert('CSV must contain headers and at least one data row.');
+
+    const headers = rows[0];
+    const dataRows = rows.slice(1);
 
     let csharp = `public static List<${entityName}> SeedData => new List<${entityName}>\n{\n`;
 
-    for (const row of rows) {
-      const values = row.split(',');
-      const idIndex = headers.findIndex(h => h.trim() === 'Id');
-      const idValue = (idIndex !== -1 && values[idIndex]) ? values[idIndex].trim() : '';
+    for (const row of dataRows) {
+      const valueMap = {};
+      headers.forEach((h, i) => {
+        valueMap[h.trim()] = row[i]?.trim() ?? '';
+      });
 
+      const idValue = valueMap['Id'];
       if (!idValue) {
         alert('Missing Id in a CSV row. Each row must include a valid Id.');
         return;
@@ -120,35 +147,39 @@ function generateCSharp() {
       csharp += `        Id = new Guid("${idValue}"),\n`;
       csharp += `        IsActive = true,\n`;
 
-      headers.forEach((header, i) => {
-        const prop = properties.find(p => p.name === header.trim());
-        if (!prop || prop.name === 'Id' || prop.name === 'IsActive') return;
+      for (const prop of properties) {
+        if (['Id', 'IsActive'].includes(prop.name)) continue;
 
-        let value = values[i]?.trim() ?? '';
-        const type = prop.type.toLowerCase();
+        const raw = valueMap[prop.name] ?? '';
+        let value = '';
 
-        if (type === 'int' || type === 'int32') {
-          value = parseInt(value) || 0;
-        } else if (type === 'bool' || type === 'boolean') {
-          value = value.toLowerCase() === 'true' ? 'true' : 'false';
-        } else if (type === 'string[]') {
-          const items = value.split('|').filter(x => x).map(v => `"${v.trim()}"`);
-          value = `new string[] { ${items.join(', ')} }`;
-        } else {
-          value = `"${value}"`;
+        switch (prop.type.toLowerCase()) {
+          case 'int':
+          case 'int32':
+            value = parseInt(raw) || 0;
+            break;
+          case 'bool':
+          case 'boolean':
+            value = raw.toLowerCase() === 'true' ? 'true' : 'false';
+            break;
+          case 'string[]':
+            const parts = raw.split('|').map(p => `"${p.trim()}"`);
+            value = `new string[] { ${parts.join(', ')} }`;
+            break;
+          case 'string':
+          default:
+            value = `"${raw}"`;
         }
 
         csharp += `        ${prop.name} = ${value},\n`;
-      });
+      }
 
       csharp += `    },\n`;
     }
 
     csharp += `};`;
-
     document.getElementById('csharpOutput').textContent = csharp;
   };
 
   reader.readAsText(file);
 }
-</script>
