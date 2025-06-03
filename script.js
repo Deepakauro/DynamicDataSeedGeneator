@@ -36,7 +36,6 @@ function parseEntity(content) {
     properties.push({ type, name });
   }
 
-  // Save for reuse
   sessionStorage.setItem('entityProperties', JSON.stringify(properties));
   sessionStorage.setItem('entityName', className);
 
@@ -44,13 +43,16 @@ function parseEntity(content) {
 }
 
 function getSampleValue(type) {
-  const lower = type.toLowerCase();
-  if (lower === 'string') return 'Sample Text';
-  if (lower === 'int' || lower === 'int32') return '1';
-  if (lower === 'bool' || lower === 'boolean') return 'true';
-  if (lower === 'guid') return '';
-  if (lower === 'string[]') return 'Value1|Value2';
-  return '';
+  switch (type.toLowerCase()) {
+    case 'string': return 'Sample Text';
+    case 'int':
+    case 'int32': return '1';
+    case 'bool':
+    case 'boolean': return 'true';
+    case 'guid': return '';
+    case 'string[]': return 'Value1|Value2';
+    default: return '';
+  }
 }
 
 function showTips() {
@@ -64,8 +66,8 @@ function showTips() {
       case 'bool':
       case 'boolean': note = 'true / false'; break;
       case 'guid': note = 'Enter a valid Guid string'; break;
-      case 'string[]': note = 'Pipe-delimited string (e.g. Value1|Value2)'; break;
-      default: note = 'Custom type'; break;
+      case 'string[]': note = 'Pipe-delimited text values (e.g. Value1|Value2)'; break;
+      default: note = 'Custom or unsupported type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
   }
@@ -123,15 +125,19 @@ function generateCSharp() {
         if (!prop || prop.name === 'Id' || prop.name === 'IsActive') return;
 
         let value = values[i]?.trim() ?? '';
-        const lowerType = prop.type.toLowerCase();
+        const lower = prop.type.toLowerCase();
 
-        if (lowerType === 'int' || lowerType === 'int32') {
+        if (lower === 'int' || lower === 'int32') {
           value = parseInt(value) || 0;
-        } else if (lowerType === 'bool' || lowerType === 'boolean') {
+        } else if (lower === 'bool' || lower === 'boolean') {
           value = value.toLowerCase() === 'true' ? 'true' : 'false';
-        } else if (lowerType === 'string[]') {
-          const items = value.split('|').map(v => `"${v.trim()}"`);
-          value = `new string[] { ${items.join(', ')} }`;
+        } else if (lower === 'string[]') {
+          const arrayItems = value
+            .split('|')
+            .filter(x => x.trim())
+            .map(v => `"${v.trim()}"`)
+            .join(', ');
+          value = `new string[] { ${arrayItems} }`;
         } else {
           value = `"${value}"`;
         }
