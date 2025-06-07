@@ -1,4 +1,4 @@
-// Minimal CSV parser that handles commas inside quotes, trims, etc.
+<script>
 function parseCsv(text) {
   const rows = [];
   const lines = text.split('\n').filter(l => l.trim() !== '');
@@ -9,8 +9,7 @@ function parseCsv(text) {
     let match;
     let str = line.trim();
     while ((match = regex.exec(str)) !== null) {
-      let val = match[1];
-      val = val.trim();
+      let val = match[1].trim();
       if (val.startsWith('"') && val.endsWith('"')) {
         val = val.slice(1, -1).replace(/""/g, '"');
       }
@@ -87,12 +86,9 @@ function showTips() {
       case 'int32': note = 'Integer (e.g. 1, 100)'; break;
       case 'bool':
       case 'boolean': note = 'true / false'; break;
-      case 'guid': note = 'Enter a valid Guid string'; break;
-      case 'string[]':
-        const parts = raw.split(',').map(p => `"${p.trim()}"`);
-        value = `new string[] { ${parts.join(', ')} }`;
-        break;
-      default: note = 'Custom type'; break;
+      case 'guid': note = 'Leave blank for new Guid() or enter a valid Guid'; break;
+      case 'string[]': note = 'Pipe-separated (e.g. Red|Blue|Green)'; break;
+      default: note = 'Custom or unsupported type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
   }
@@ -102,11 +98,9 @@ function showTips() {
 
 function downloadCsv() {
   if (!properties.length) return alert('Upload a C# entity first.');
-
   const headers = properties.map(p => p.name).join(',');
   const sampleRow = properties.map(p => getSampleValue(p.type)).join(',');
   const csv = `${headers}\n${sampleRow}`;
-
   const blob = new Blob([csv], { type: 'text/csv' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -119,19 +113,16 @@ function downloadCsv() {
 function generateCSharp() {
   const file = document.getElementById('csvFileInput').files[0];
   const entityName = document.getElementById('entityName').value.trim() || 'YourEntity';
-
   if (!file || !properties.length) return alert('Make sure both CSV and Entity file are loaded.');
 
   const reader = new FileReader();
   reader.onload = function (e) {
     const text = e.target.result.trim();
     const rows = parseCsv(text);
-
     if (rows.length < 2) return alert('CSV must contain headers and at least one data row.');
 
     const headers = rows[0];
     const dataRows = rows.slice(1);
-
     let csharp = `public static List<${entityName}> SeedData => new List<${entityName}>\n{\n`;
 
     for (const row of dataRows) {
@@ -151,30 +142,37 @@ function generateCSharp() {
       csharp += `        IsActive = true,\n`;
 
       for (const prop of properties) {
-        if (['Id', 'IsActive'].includes(prop.name)) continue;
+        const propName = prop.name;
+        if (['Id', 'IsActive'].includes(propName)) continue;
 
-        const raw = valueMap[prop.name] ?? '';
+        const propType = prop.type.toLowerCase();
+        const raw = valueMap[propName] ?? '';
         let value = '';
 
-        switch (prop.type.toLowerCase()) {
-          case 'int':
-          case 'int32':
-            value = parseInt(raw) || 0;
-            break;
-          case 'bool':
-          case 'boolean':
-            value = raw.toLowerCase() === 'true' ? 'true' : 'false';
-            break;
-          case 'string[]':
-            const parts = raw.split('|').map(p => `"${p.trim()}"`);
-            value = `new string[] { ${parts.join(', ')} }`;
-            break;
-          case 'string':
-          default:
-            value = `"${raw}"`;
+        if (propType === 'guid' && propName.toLowerCase().endsWith('id')) {
+          value = raw ? `new Guid("${raw}")` : 'new Guid()';
+        } else {
+          switch (propType) {
+            case 'int':
+            case 'int32':
+              value = parseInt(raw) || 0;
+              break;
+            case 'bool':
+            case 'boolean':
+              value = raw.toLowerCase() === 'true' ? 'true' : 'false';
+              break;
+            case 'string[]':
+              const parts = raw.split('|').map(p => `"${p.trim()}"`);
+              value = `new string[] { ${parts.join(', ')} }`;
+              break;
+            case 'string':
+            default:
+              value = `"${raw}"`;
+              break;
+          }
         }
 
-        csharp += `        ${prop.name} = ${value},\n`;
+        csharp += `        ${propName} = ${value},\n`;
       }
 
       csharp += `    },\n`;
@@ -186,3 +184,4 @@ function generateCSharp() {
 
   reader.readAsText(file);
 }
+</script>
