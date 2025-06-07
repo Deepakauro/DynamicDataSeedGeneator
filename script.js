@@ -1,4 +1,3 @@
-<script>
 // Minimal CSV parser that handles commas inside quotes, trims, etc.
 function parseCsv(text) {
   const rows = [];
@@ -89,7 +88,10 @@ function showTips() {
       case 'bool':
       case 'boolean': note = 'true / false'; break;
       case 'guid': note = 'Enter a valid Guid string'; break;
-      case 'string[]': note = 'Pipe-separated values (e.g. Red|Blue|Green)'; break;
+      case 'string[]':
+        const parts = raw.split(',').map(p => `"${p.trim()}"`);
+        value = `new string[] { ${parts.join(', ')} }`;
+        break;
       default: note = 'Custom type'; break;
     }
     tips += `<li><strong>${prop.name}</strong> (${prop.type}) – ${note}</li>`;
@@ -164,15 +166,16 @@ function generateCSharp() {
             value = raw.toLowerCase() === 'true' ? 'true' : 'false';
             break;
           case 'guid':
-            value = raw.startsWith('new Guid("') ? raw : `new Guid("${raw}")`;
-            break;
-          case 'string[]':
-            const parts = raw.split('|').map(p => `"${p.trim()}"`);
-            value = `new string[] { ${parts.join(', ')} }`;
-            break;
-          case 'string':
-          default:
-            value = `"${raw}"`;
+          value = raw.startsWith('new Guid("') ? raw : `new Guid("${raw}")`;
+          break;
+        case 'string[]':
+          const parts = raw.split('|').map(p => `"${p.trim()}"`);
+          value = `new string[] { ${parts.join(', ')} }`;
+          break;
+        case 'string':
+        default:
+          value = `"${raw}"`;
+
         }
 
         csharp += `        ${prop.name} = ${value},\n`;
@@ -187,4 +190,3 @@ function generateCSharp() {
 
   reader.readAsText(file);
 }
-</script>
