@@ -165,13 +165,17 @@ function generateCSharp() {
           case 'boolean':
             value = raw.toLowerCase() === 'true' ? 'true' : 'false';
             break;
-          case 'string[]':
-            const parts = raw.split('|').map(p => `"${p.trim()}"`);
-            value = `new string[] { ${parts.join(', ')} }`;
-            break;
-          case 'string':
-          default:
-            value = `"${raw}"`;
+          case 'guid':
+          value = raw.startsWith('new Guid("') ? raw : `new Guid("${raw}")`;
+          break;
+        case 'string[]':
+          const parts = raw.split('|').map(p => `"${p.trim()}"`);
+          value = `new string[] { ${parts.join(', ')} }`;
+          break;
+        case 'string':
+        default:
+          value = `"${raw}"`;
+
         }
 
         csharp += `        ${prop.name} = ${value},\n`;
