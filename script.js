@@ -168,6 +168,10 @@ function generateCSharp() {
           case 'guid':
           value = raw.startsWith('new Guid("') ? raw : `new Guid("${raw}")`;
           break;
+            case 'long':
+            case 'int64':
+              value = parseInt(raw) || 0; // or use BigInt(raw) if precision is critical
+              break;
         case 'string[]':
           const parts = raw.split('|').map(p => `"${p.trim()}"`);
           value = `new string[] { ${parts.join(', ')} }`;
